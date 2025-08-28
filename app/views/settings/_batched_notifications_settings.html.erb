@@ -1,0 +1,10 @@
+
+<p>
+  <label for="settings_enabled"><%= l(:label_enabled) %></label>
+  <%= select_tag 'settings[enabled]', options_for_select([['Yes', 'true'], ['No', 'false']], @settings['enabled']) %>
+</p>
+
+<p>
+  <label for="settings_delay"><%= l(:label_delay_minutes) %></label>
+  <%= text_field_tag 'settings[delay]', @settings['delay'], size: 5 %>
+</p>
