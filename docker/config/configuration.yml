@@ -1,0 +1,14 @@
+
+# config/configuration.yml
+#
+# This file is used to configure Redmine's email settings.
+# It is mounted into the Redmine Docker container.
+
+default:
+  email_delivery:
+    delivery_method: :smtp
+    smtp_settings:
+      address: mailhog
+      port: 1025
+      authentication: :none
+      enable_starttls_auto: false
