@@ -1,11 +1,14 @@
+<% if @journals.map(&:user).uniq.length == 1 %>
+  <%= l(:text_issue_updated, :id => link_to("##{@issue.id}", @issue_url), :author => h(@journals.first.user)).html_safe %>
+<% else %>
+  <%= l(:text_issue_updated_multiple, :id => link_to("##{@issue.id}", @issue_url)).html_safe %>
+<% end %>
+<hr />
 
 <% @journals.each do |journal| %>
   <% if journal.private_notes? %>
     (<%= l(:field_private_notes) %>)
   <% end %>
-  <%= l(:text_issue_updated, :id => link_to("##{@issue.id}", @issue_url), :author => h(journal.user)).html_safe %>
-  <hr />
-
   <ul class="journal details">
   <% details_to_strings(journal.visible_details, false, :only_path => false).each do |string| %>
     <li><%= string %></li>
