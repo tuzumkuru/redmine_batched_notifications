@@ -10,7 +10,7 @@ if [ -f /usr/src/redmine/.setup_done ]; then
 fi
 
 # Load default data (ensure roles are present)
-bundle exec rake redmine:load_default_data RAILS_ENV=production --trace REDMINE_DEFAULT_LANGUAGE=en
+bundle exec rake redmine:load_default_data RAILS_ENV=production --trace REDMINE_LANG=en
 
 # Run database migrations
 echo "Running database migrations..."
