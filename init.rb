@@ -2,11 +2,11 @@
 
 Redmine::Plugin.register :redmine_batched_notifications do
   name 'Redmine Batched Notifications plugin'
-  author 'Gemini'
+  author 'Tolga Uzun'
   description 'This is a plugin for Redmine that batches issue update notifications.'
   version '0.0.1'
-  url 'https://github.com/google/gemini-cli'
-  author_url 'https://gemini.google.com'
+  url 'https://github.com/tuzumkuru/redmine_batched_notifications'
+  author_url 'https://github.com/tuzumkuru'
 
   Rails.application.config.to_prepare do
     # Patches
