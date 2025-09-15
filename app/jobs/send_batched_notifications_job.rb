@@ -45,3 +45,4 @@ class SendBatchedNotificationsJob < ActiveJob::Base
       Rails.cache.delete("notification_time_for_issue_#{issue_id}")
     end
   end
+end
