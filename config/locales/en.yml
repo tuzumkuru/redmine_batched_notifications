@@ -1,4 +1,4 @@
 en:
   label_enabled: Enabled
-  label_delay_minutes: Delay (minutes)
+  label_delay_seconds: Delay (seconds)
   text_issue_updated_multiple: Issue %{id} has been updated by multiple users

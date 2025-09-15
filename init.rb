@@ -22,7 +22,7 @@ Redmine::Plugin.register :redmine_batched_notifications do
 
   settings default: {
     'enabled' => 'true',
-    'delay' => '5'
+    'delay' => '300'  # Delay in seconds (300 = 5 minutes)
   }, partial: 'settings/batched_notifications_settings'
 end
 

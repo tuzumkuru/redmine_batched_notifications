@@ -15,9 +15,14 @@ module JournalPatch
         # Create a pending notification
         PendingNotification.create(issue_id: issue.id, journal_id: self.id)
 
-        # Schedule the background job
-        delay = Setting.plugin_redmine_batched_notifications['delay'].to_i.minutes
-        SendBatchedNotificationsJob.set(wait: delay).perform_later(issue.id)
+        delay = Setting.plugin_redmine_batched_notifications['delay'].to_i.seconds
+        scheduled_at = Time.now + delay
+
+        # Store the time when the job is expected to run
+        Rails.cache.write("notification_time_for_issue_#{issue.id}", scheduled_at, expires_in: delay + 1.hour)
+
+        # Schedule the job
+        SendBatchedNotificationsJob.set(wait: delay).perform_later(issue.id, scheduled_at.to_i)
       else
         send_notification_without_batch
       end
