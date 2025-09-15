@@ -45,26 +45,3 @@ class SendBatchedNotificationsJob < ActiveJob::Base
       Rails.cache.delete("notification_time_for_issue_#{issue_id}")
     end
   end
-
-  private
-
-  def should_notify_user?(user, issue, journals)
-    return false if user.mail.blank? || user.mail_notification == 'none'
-
-    case user.mail_notification
-    when 'all'
-      true
-    when 'selected'
-      issue.watchers.include?(user) || issue.assigned_to == user || issue.author == user || journals.any? { |j| j.user == user }
-    when 'only_my_events'
-      journals.any? { |j| j.user == user }
-    when 'only_assigned'
-      issue.assigned_to == user
-    when 'only_owner'
-      issue.author == user
-    else
-      false
-    end
-  end
-end
-
