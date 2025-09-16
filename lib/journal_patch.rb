@@ -12,18 +12,28 @@ module JournalPatch
   module InstanceMethods
     def send_notification_with_batch
       if Setting.plugin_redmine_batched_notifications['enabled'] == 'true' && issue.present?
-        # Create a pending notification
-        PendingNotification.create(issue_id: issue.id, journal_id: self.id)
-
-        delay = Setting.plugin_redmine_batched_notifications['delay'].to_i.seconds
-        scheduled_at = Time.now + delay
-
-        # Store the time when the job is expected to run
-        Rails.cache.write("notification_time_for_issue_#{issue.id}", scheduled_at, expires_in: delay + 1.hour)
-
-        # Schedule the job
-        SendBatchedNotificationsJob.set(wait: delay).perform_later(issue.id, scheduled_at.to_i)
+        # Compute should_notify inline (mirrors core logic) and batch if true
+        should_notify = notify? && (
+          Setting.notified_events.include?('issue_updated') ||
+          (Setting.notified_events.include?('issue_note_added') && notes.present?) ||
+          (Setting.notified_events.include?('issue_status_updated') && new_status.present?) ||
+          (Setting.notified_events.include?('issue_assigned_to_updated') && detail_for_attribute('assigned_to_id').present?) ||
+          (Setting.notified_events.include?('issue_priority_updated') && new_value_for('priority_id').present?) ||
+          (Setting.notified_events.include?('issue_fixed_version_updated') && detail_for_attribute('fixed_version_id').present?) ||
+          (Setting.notified_events.include?('issue_attachment_added') && details.any? { |d| d.property == 'attachment' && d.value })
+        )
+        
+        if should_notify
+          # Batch logic
+          PendingNotification.create(issue_id: issue.id, journal_id: self.id)
+          delay = Setting.plugin_redmine_batched_notifications['delay'].to_i.seconds
+          scheduled_at = Time.now + delay
+          Rails.cache.write("notification_time_for_issue_#{issue.id}", scheduled_at, expires_in: delay + 1.hour)
+          SendBatchedNotificationsJob.set(wait: delay).perform_later(issue.id, scheduled_at.to_i)
+        end
+        # If should_notify is false, do nothing (respects global settings)
       else
+        # Plugin disabled or no issue: let core handle it (it will check and send if needed)
         send_notification_without_batch
       end
     end
