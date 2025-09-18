@@ -7,37 +7,22 @@ class SendBatchedNotificationsJob < ActiveJob::Base
 
     # If the expected run time is later than this job's scheduled time,
     # it means a newer job has been enqueued. So, this one should do nothing.
-    # We add a small grace period (e.g., 1 second) to account for minor timing discrepancies.
-    return if expected_run_time.present? && expected_run_time.to_i > scheduled_at.to_i
+    return if expected_run_time.present? && expected_run_time.to_f > scheduled_at.to_f
 
     lock_key = "batched_notifications_job_#{issue_id}"
-    return if Rails.cache.read(lock_key) # Skip if already running
-    Rails.cache.write(lock_key, true, expires_in: 10.minutes) # Lock for 10 min
+    
+    # Use a non-atomic lock compatible with FileStore.
+    return if Rails.cache.read(lock_key)
+    Rails.cache.write(lock_key, true, expires_in: 10.minutes)
 
     begin
       pending_notifications = PendingNotification.where(issue_id: issue_id)
       return if pending_notifications.empty?
 
-      issue = Issue.find(issue_id)
       journals = Journal.where(id: pending_notifications.pluck(:journal_id))
 
-      # Group journals by author (journal.user)
-      author_journals = Hash.new { |h, k| h[k] = [] }
-      journals.each do |journal|
-        author_journals[journal.user] << journal.id
-      end
-
-      # For each author, send batched emails to their notified users
-      author_journals.each do |author, journal_ids|
-        all_notified_users = Set.new
-        journals.where(id: journal_ids).each do |journal|
-          all_notified_users.merge(journal.notified_users)
-        end
-
-        all_notified_users.each do |user|
-          Mailer.deliver_batched_issue_edit(user, issue, journal_ids, author)
-        end
-      end
+      # Call the new mailer method which handles all recipient logic.
+      Mailer.deliver_batch_issue_edits(journals) if journals.any?
 
       pending_notifications.destroy_all
     ensure

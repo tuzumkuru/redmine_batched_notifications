@@ -29,7 +29,7 @@ module JournalPatch
           delay = Setting.plugin_redmine_batched_notifications['delay'].to_i.seconds
           scheduled_at = Time.now + delay
           Rails.cache.write("notification_time_for_issue_#{issue.id}", scheduled_at, expires_in: delay + 1.hour)
-          SendBatchedNotificationsJob.set(wait: delay).perform_later(issue.id, scheduled_at.to_i)
+          SendBatchedNotificationsJob.set(wait: delay).perform_later(issue.id, scheduled_at.to_f)
         end
         # If should_notify is false, do nothing (respects global settings)
       else

@@ -6,7 +6,7 @@
 
 <% @journals.each do |journal| %>
 <%= "(#{l(:field_private_notes)}) " if journal.private_notes? -%>
-<% details_to_strings(journal.visible_details, true).each do |string| -%>
+<% details_to_strings(journal.visible_details(@user), true).each do |string| -%>
 <%= string %>
 <% end -%>
 

@@ -12,3 +12,8 @@ default:
       port: 1025
       authentication: :none
       enable_starttls_auto: false
+#  sudo_mode:
+#      enabled: true
+          # Optional: Configure a timeout duration in minutes for sudo mode to automatically expire
+#      timeout: 1
+

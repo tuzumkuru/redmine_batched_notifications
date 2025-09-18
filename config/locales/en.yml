@@ -2,3 +2,4 @@ en:
   label_enabled: Enabled
   label_delay_seconds: Delay (seconds)
   text_issue_updated_multiple: Issue %{id} has been updated by multiple users
+  text_batched_issue_updates: "%{count} issues have been updated"
