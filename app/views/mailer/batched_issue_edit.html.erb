@@ -1,8 +1,5 @@
-<% if @journals.map(&:user).uniq.length == 1 %>
-  <%= l(:text_issue_updated, :id => link_to("##{@issue.id}", @issue_url), :author => h(@journals.first.user)).html_safe %>
-<% else %>
-  <%= l(:text_issue_updated_multiple, :id => link_to("##{@issue.id}", @issue_url)).html_safe %>
-<% end %>
+<%# Batched notifications for a single author %>
+<%= l(:text_issue_updated, :id => link_to("##{@issue.id}", @issue_url), :author => h(@author)).html_safe %>
 <hr />
 
 <% @journals.each do |journal| %>

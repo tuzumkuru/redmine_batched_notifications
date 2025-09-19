@@ -4,32 +4,36 @@ module MailerPatch
   def self.included(base)
     base.send(:include, InstanceMethods)
     base.class_eval do
-      # Class method finds all potential recipients and calls the instance method
-      # only for those who have visible journal entries with content.
+      # This class method now receives a batch of journals from a single author.
       def self.deliver_batch_issue_edits(journals)
-        # 1. Gather all potential users from all journals, like in core Redmine
+        # Get all potential recipients for this batch of changes.
         recipients = journals.flat_map do |journal|
           journal.notified_users | journal.notified_watchers | journal.notified_mentions | journal.journalized.notified_mentions
         end.uniq
 
-        # 2. For each user, check for visible journals with content before queueing the email job
+        # For each recipient, filter the journals they can see and queue an email.
         recipients.each do |user|
-          # A journal is included if it's visible AND has content for the user.
           visible_journals = journals.select do |j|
-            j.visible?(user) && (j.notes.present? || j.visible_details(user).any?)
+            # A journal is visible if it's not private, OR if the user has permission to see private notes.
+            # This ensures that private notes are only included for authorized users.
+            is_public = !j.private_notes?
+            can_view_private = user.allowed_to?(:view_private_notes, j.journalized.project)
+
+            (is_public || can_view_private) && (j.notes.present? || j.visible_details(user).any?)
           end
-          
-          # Only deliver an email if there is something to show the user
+
           if visible_journals.any?
             batched_issue_edit(user, visible_journals).deliver_later
           end
         end
       end
 
-      # Instance method for a single issue's batched notifications.
+      # Instance method for a single author's batched notifications.
       def batched_issue_edit(user, journals)
-        # All journals are for the same issue, guaranteed by the job.
         issue = journals.first.journalized
+        # Set the @author so Redmine's core mail filter can check for self-notification.
+        @author = journals.first.user
+        
         @issue = issue
         @user = user
         @journals = journals

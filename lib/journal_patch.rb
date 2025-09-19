@@ -11,7 +11,7 @@ module JournalPatch
 
   module InstanceMethods
     def send_notification_with_batch
-      if Setting.plugin_redmine_batched_notifications['enabled'] == 'true' && issue.present?
+      if Setting.plugin_redmine_batched_notifications['enabled'] == 'true' && issue.present? && user.present?
         # Compute should_notify inline (mirrors core logic) and batch if true
         should_notify = notify? && (
           Setting.notified_events.include?('issue_updated') ||
@@ -24,12 +24,16 @@ module JournalPatch
         )
         
         if should_notify
-          # Batch logic
-          PendingNotification.create(issue_id: issue.id, journal_id: self.id)
+          # Batch logic is now per-user, per-issue
+          PendingNotification.create(issue_id: issue.id, journal_id: self.id, user_id: self.user_id)
+          
           delay = Setting.plugin_redmine_batched_notifications['delay'].to_i.seconds
           scheduled_at = Time.now + delay
-          Rails.cache.write("notification_time_for_issue_#{issue.id}", scheduled_at, expires_in: delay + 1.hour)
-          SendBatchedNotificationsJob.set(wait: delay).perform_later(issue.id, scheduled_at.to_f)
+          
+          cache_key = "notification_time_for_issue_#{issue.id}_user_#{self.user_id}"
+          Rails.cache.write(cache_key, scheduled_at, expires_in: delay + 1.hour)
+          
+          SendBatchedNotificationsJob.set(wait: delay).perform_later(issue.id, self.user_id, scheduled_at.to_f)
         end
         # If should_notify is false, do nothing (respects global settings)
       else

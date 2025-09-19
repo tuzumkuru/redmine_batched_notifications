@@ -1,8 +1,5 @@
-<% if @journals.map(&:user).uniq.length == 1 %>
-<%= l(:text_issue_updated, :id => "##{@issue.id}", :author => @journals.first.user) %>
-<% else %>
-<%= l(:text_issue_updated_multiple, :id => "##{@issue.id}") %>
-<% end %>
+<%# Batched notifications for a single author %>
+<%= l(:text_issue_updated, :id => "##{@issue.id}", :author => @author) %>
 
 <% @journals.each do |journal| %>
 <%= "(#{l(:field_private_notes)}) " if journal.private_notes? -%>
