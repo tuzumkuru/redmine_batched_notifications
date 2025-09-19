@@ -1,4 +1,4 @@
-<%# Batched notifications for a single author %>
+<%# This template renders a batched notification email for a single user's changes to an issue. %>
 <%= l(:text_issue_updated, :id => link_to("##{@issue.id}", @issue_url), :author => h(@author)).html_safe %>
 <hr />
 

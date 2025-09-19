@@ -3,17 +3,16 @@ class SendBatchedNotificationsJob < ActiveJob::Base
 
   def perform(issue_id, user_id, scheduled_at_timestamp)
     scheduled_at = Time.at(scheduled_at_timestamp)
-    
+
     time_cache_key = "notification_time_for_issue_#{issue_id}_user_#{user_id}"
     expected_run_time = Rails.cache.read(time_cache_key)
 
-    # If the expected run time is later than this job's scheduled time,
-    # it means a newer job has been enqueued. So, this one should do nothing.
+    # Abort if a newer job has been enqueued for this issue and user.
     return if expected_run_time.present? && expected_run_time.to_f > scheduled_at.to_f
 
     lock_key = "batched_notifications_job_#{issue_id}_user_#{user_id}"
-    
-    # Use a non-atomic lock compatible with FileStore.
+
+    # Use a non-atomic lock to prevent concurrent job execution.
     return if Rails.cache.read(lock_key)
     Rails.cache.write(lock_key, true, expires_in: 10.minutes)
 
@@ -23,12 +22,11 @@ class SendBatchedNotificationsJob < ActiveJob::Base
 
       journals = Journal.where(id: pending_notifications.pluck(:journal_id))
 
-      # Call the mailer method which handles all recipient logic.
       Mailer.deliver_batch_issue_edits(journals) if journals.any?
 
       pending_notifications.destroy_all
     ensure
-      Rails.cache.delete(lock_key) # Release lock
+      Rails.cache.delete(lock_key)
       Rails.cache.delete(time_cache_key)
     end
   end

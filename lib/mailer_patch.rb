@@ -4,18 +4,17 @@ module MailerPatch
   def self.included(base)
     base.send(:include, InstanceMethods)
     base.class_eval do
-      # This class method now receives a batch of journals from a single author.
+      # Delivers a batch of issue edits to all notified users.
       def self.deliver_batch_issue_edits(journals)
-        # Get all potential recipients for this batch of changes.
         recipients = journals.flat_map do |journal|
           journal.notified_users | journal.notified_watchers | journal.notified_mentions | journal.journalized.notified_mentions
         end.uniq
 
-        # For each recipient, filter the journals they can see and queue an email.
+        # For each recipient, filter the journals to what they are allowed to see.
         recipients.each do |user|
           visible_journals = journals.select do |j|
-            # A journal is visible if it's not private, OR if the user has permission to see private notes.
-            # This ensures that private notes are only included for authorized users.
+            # A journal is visible if it's public, or if the user can view private notes.
+            # This ensures private notes are only sent to authorized users.
             is_public = !j.private_notes?
             can_view_private = user.allowed_to?(:view_private_notes, j.journalized.project)
 
@@ -28,12 +27,12 @@ module MailerPatch
         end
       end
 
-      # Instance method for a single author's batched notifications.
+      # Prepares a single email with a batch of issue edits for a user.
       def batched_issue_edit(user, journals)
         issue = journals.first.journalized
-        # Set the @author so Redmine's core mail filter can check for self-notification.
+        # Set @author for Redmine's core mail filter to handle self-notification.
         @author = journals.first.user
-        
+
         @issue = issue
         @user = user
         @journals = journals
@@ -58,7 +57,6 @@ module MailerPatch
   end
 
   module InstanceMethods
-    # No instance methods needed yet
   end
 end
 
