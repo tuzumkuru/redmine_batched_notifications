@@ -4,22 +4,7 @@ This plugin for Redmine helps reduce the volume of email notifications by batchi
 
 ## How it Works
 
-The plugin's mechanism is designed to intercept and delay notifications to batch them effectively:
-
-1.  **Intercepting Notifications:** The plugin patches Redmine's `Journal` model to prevent immediate email notifications for issue updates. Instead of sending an email, it creates a `PendingNotification` record in the database for each change.
-
-2.  **Scheduling a Job:** When a `PendingNotification` is created, a `SendBatchedNotificationsJob` is scheduled to run after a configurable delay (default is 60 seconds). This job is responsible for sending the batched email. If other changes are made to the same issue by the same user before the job runs, the job's execution time is pushed back, effectively resetting the delay timer.
-
-3.  **Sending Batched Emails:** When the `SendBatchedNotificationsJob` executes, it gathers all pending notifications for that specific issue and user. It then generates a single email that includes all the journal entries (updates, notes, etc.) that were created during the batching period.
-
-4.  **Handling Private Notes:** The plugin is careful to respect Redmine's permissions. When batching notifications, it checks if a journal contains a private note. The email sent to each user will only include the private note if that user has the permission to view private notes in that project.
-
-## Configuration
-
-The plugin can be configured from the Redmine administration panel (`Administration -> Plugins -> Redmine Batched Notifications -> Configure`):
-
-*   **Enabled:** Turn the batching functionality on or off globally.
-*   **Delay (seconds):** The time to wait for more changes before sending a notification. Each new change on an issue by the same user will reset this timer.
+Instead of sending an email instantly for every issue update, this plugin waits for a short, configurable period. If more updates are made to the same issue by the same user during that time, it groups them all into a single, summary email. This prevents users from being flooded with notifications for rapid, minor changes. The plugin also ensures that private notes are only sent to users with the appropriate permissions.
 
 ## Installation
 
@@ -32,6 +17,13 @@ The plugin can be configured from the Redmine administration panel (`Administrat
     bundle exec rake redmine:plugins:migrate
     ```
 3.  Restart your Redmine application.
+
+## Configuration
+
+The plugin can be configured from the Redmine administration panel (`Administration -> Plugins -> Redmine Batched Notifications -> Configure`):
+
+*   **Enabled:** Turn the batching functionality on or off globally.
+*   **Delay (seconds):** The time to wait for more changes before sending a notification. Each new change on an issue by the same user will reset this timer.
 
 ## Development Environment (Docker)
 
