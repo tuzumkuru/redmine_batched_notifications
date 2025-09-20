@@ -3,7 +3,7 @@
 # This script performs initial setup for the Redmine development environment.
 # It should be run manually after the container is up and running.
 
-Idempotency check to prevent re-running the setup.
+# Idempotency check to prevent re-running the setup.
 if [ -f /usr/src/redmine/.setup_done ]; then
   echo "Setup has already been completed. Exiting."
   exit 0
