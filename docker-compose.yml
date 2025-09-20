@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: redmine_development
       POSTGRES_USER: redmine
-      POSTGRES_PASSWORD: my_password
+      POSTGRES_PASSWORD: password
     volumes:
       - ./docker/vol/db_data:/var/lib/postgresql/data
 
@@ -15,17 +15,17 @@ services:
     ports:
       - "3000:3000"
     environment:
-      REDMINE_DB_POSTGRES: db  # Host (matches the service name)
+      REDMINE_DB_POSTGRES: db
       REDMINE_DB_DATABASE: redmine_development
       REDMINE_DB_USERNAME: redmine
-      REDMINE_DB_PASSWORD: my_password
+      REDMINE_DB_PASSWORD: password
+      REDMINE_PLUGINS_MIGRATE: "true"
     depends_on:
       - db
       - mailhog
     volumes:
       - ./docker/vol/redmine_data:/usr/src/redmine/files
       - .:/usr/src/redmine/plugins/redmine_batched_notifications
-      - ./docker/setup_redmine_dev.sh:/usr/src/redmine/setup_redmine_dev.sh
       - ./docker/config/configuration.yml:/usr/src/redmine/config/configuration.yml
 
   mailhog:
