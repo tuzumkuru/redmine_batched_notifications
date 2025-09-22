@@ -2,6 +2,10 @@
 
 This plugin for Redmine helps reduce the volume of email notifications by batching updates for a single issue into a single email. When multiple edits are made to an issue by a user within a short timeframe, instead of sending an email for each update, the plugin waits for a configurable period and then sends one summary email containing all the changes.
 
+## Compatibility
+
+This plugin has been tested and is confirmed to work with **Redmine v6.x**. It is not known if it is compatible with earlier versions.
+
 ## How it Works
 
 Instead of sending an email instantly for every issue update, this plugin waits for a short, configurable period. If more updates are made to the same issue by the same user during that time, it groups them all into a single, summary email. This prevents users from being flooded with notifications for rapid, minor changes. The plugin also ensures that private notes are only sent to users with the appropriate permissions.
