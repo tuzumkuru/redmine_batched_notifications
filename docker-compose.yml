@@ -27,6 +27,7 @@ services:
 
   mailhog:
     image: mailhog/mailhog:latest
+    restart: always
     logging:
       driver: "none"
     ports:
