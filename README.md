@@ -50,3 +50,23 @@ A Docker-based development environment is provided for convenience.
     ```bash
     docker compose down
     ```
+
+## Testing
+
+The plugin includes a set of tests to ensure its functionality. The tests are run inside the Docker container to ensure a consistent environment.
+
+1.  **Start the services:**
+    ```bash
+    docker compose up -d
+    ```
+
+2.  **Run the setup script for tests:**
+    This script will set up the Redmine test database.
+    ```bash
+    docker compose exec redmine /usr/src/redmine/plugins/redmine_batched_notifications/docker/setup_redmine_tests.sh
+    ```
+
+3.  **Run all tests for the plugin:**
+    ```bash
+    docker compose exec redmine bundle exec rake redmine:plugins:test NAME=redmine_batched_notifications
+    ```
