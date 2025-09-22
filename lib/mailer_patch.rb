@@ -60,4 +60,4 @@ module MailerPatch
   end
 end
 
-Mailer.send(:include, MailerPatch)
+

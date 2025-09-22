@@ -43,4 +43,3 @@ module JournalPatch
   end
 end
 
-Journal.send(:include, JournalPatch)
