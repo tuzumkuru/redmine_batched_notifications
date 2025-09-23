@@ -17,7 +17,6 @@ end
 # Load patches
 # -----------------------------------------------------------------------------
 def load_batched_notifications_patches
-  puts "Loading batched notifications patches..."
   require_dependency 'journal'
   require_dependency 'mailer'
   require_relative 'lib/journal_patch'
