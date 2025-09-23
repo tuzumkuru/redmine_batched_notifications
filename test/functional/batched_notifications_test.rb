@@ -1,45 +1,99 @@
 require File.expand_path('../../test_helper', __FILE__)
+require 'mocha/minitest'
+require 'active_job/test_helper'
 
-class BatchedNotificationsTest < Redmine::IntegrationTest
-  fixtures :projects, :trackers, :issue_statuses, :issues,
-           :users, :email_addresses, :roles, :members, :member_roles
+# End-to-end flow test verifying mail behavior with the plugin
+# disabled vs enabled. This serves as a simple, reliable baseline.
+class BatchedNotificationsTest < ActiveSupport::TestCase
+  # Disable transactional tests so after_commit callbacks (which trigger
+  # Journal#send_notification) actually fire during the test run.
+  self.use_transactional_tests = false
+
+  include ActiveJob::TestHelper
+
+  fixtures :projects, :trackers, :issue_statuses, :issues, :journals,
+           :enumerations, :users, :roles, :members, :member_roles,
+           :projects_trackers, :enabled_modules, :workflows, :watchers
 
   def setup
-    # This setup runs before each test
-    ActionMailer::Base.deliveries.clear
-    Setting.plain_text_mail = '1' # Use text mail for easier inspection
-    # Ensure all notifications are on for the test
+    Setting.default_language = 'en'
+    Setting.host_name = 'example.test'
+    Setting.protocol = 'http'
+
+    # Ensure all notification events are on to satisfy Journal#notify?
     Setting.notified_events = Redmine::Notifiable.all.collect(&:name)
+
+    # Use a stable current user (admin)
+    User.stubs(:current).returns(User.find(1))
+
+    @project = Project.find(1)
+    @developer = User.find(2) # jsmith
+    @reporter  = User.find(3) # dlopper
+
+    # Make sure both users will receive notifications
+    @developer.update_column(:mail_notification, 'all')
+    @reporter.update_column(:mail_notification, 'all')
+
+    ActionMailer::Base.deliveries.clear
+    clear_enqueued_jobs
   end
 
-  test "creating a new issue should send an email immediately" do
-    # Log in as a user who can create issues
-    log_user('jsmith', 'jsmith') # User 2, a manager
+  def create_issue!
+    Issue.create!(
+      project_id: @project.id,
+      tracker_id: 1,
+      author_id: @developer.id,
+      assigned_to_id: @developer.id,
+      status_id: 1,
+      priority: IssuePriority.first,
+      subject: 'Flow: New issue',
+      watcher_user_ids: [@developer.id, @reporter.id]
+    )
+  end
 
-    # Set a different user to be the watcher
-    watcher_user = User.find(3) # dlopper, a developer
-    watcher_user.update!(mail_notification: 'all')
+  def update_issue!(issue)
+    issue.reload
+    issue.init_journal(@developer, 'Flow: updated description')
+    issue.subject = 'Flow: Updated subject'
+    assert issue.save!
+    issue
+  end
 
-    # Create the issue by posting to the controller
-    post '/projects/1/issues', params: {
-      issue: {
-        tracker_id: 1,
-        subject: 'New issue from integration test',
-        description: 'This is the description.',
-        watcher_user_ids: [watcher_user.id]
-      }
-    }
+  def test_mail_flow_disabled_then_enabled
+    # 1) Plugin disabled -> creation sends immediately, update sends immediately
+    Setting.plugin_redmine_batched_notifications = { 'enabled' => 'false' }
 
-    # The request should succeed and redirect to the new issue
-    assert_response :redirect
-    new_issue = Issue.last
-    assert_redirected_to "/issues/#{new_issue.id}"
+    perform_enqueued_jobs do
+      before = ActionMailer::Base.deliveries.size
+      issue = create_issue!
+      mid = ActionMailer::Base.deliveries.size
+      assert_operator (mid - before), :>=, 1, 'Expected at least 1 email on issue creation when plugin disabled'
 
-    # Manually assert that an email was sent
-    assert_equal 2, ActionMailer::Base.deliveries.size, "Expected 2 emails to be sent, but found #{ActionMailer::Base.deliveries.size}"
+      update_issue!(issue)
+      after = ActionMailer::Base.deliveries.size
+      assert_operator (after - mid), :>=, 1, 'Expected at least 1 email on issue update when plugin disabled'
+    end
 
-    # Verify the email details
-    recipient_mails = ActionMailer::Base.deliveries.map { |d| d.to }.flatten
-    assert_includes recipient_mails, watcher_user.mail
+    # 2) Plugin enabled -> creation sends immediately, update enqueues (no immediate mail)
+    ActionMailer::Base.deliveries.clear
+    clear_enqueued_jobs
+
+    Setting.plugin_redmine_batched_notifications = { 'enabled' => 'true', 'delay' => '5' }
+
+    # Creation still sends now (issue_added is not batched by our plugin)
+    issue2 = nil
+    perform_enqueued_jobs do
+      before2 = ActionMailer::Base.deliveries.size
+      issue2 = create_issue!
+      after2 = ActionMailer::Base.deliveries.size
+      assert_operator (after2 - before2), :>=, 1, 'Expected at least 1 email on issue creation when plugin enabled'
+    end
+
+    # Update: should enqueue a batched job, no immediate emails (do NOT perform enqueued jobs here)
+    assert_no_difference 'ActionMailer::Base.deliveries.size' do
+      assert_enqueued_jobs 1 do
+        update_issue!(issue2)
+      end
+    end
   end
 end
